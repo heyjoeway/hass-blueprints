@@ -1,4 +1,4 @@
-# hass-blueprints# Home-Assistant blueprints
+# Home-Assistant blueprints
 
 My personal collection of Home Assistant blueprints
 
