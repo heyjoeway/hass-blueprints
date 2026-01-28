@@ -40,19 +40,14 @@ blueprint:
       description: "Default: Taken"
       default: "Taken"
 
-    notification_action_later:
-      name: "Notification action: Ask later (Optional)"
-      description: "Default: Ask later"
-      default: "Ask later"
-
     notification_action_skip:
       name: "Notification action: Skip (Optional)"
       description: "Default: Skip"
       default: "Skip"
 
     ask_later_wait_time:
-      name: Wait time before next reminder
-      description: Minutes before notify again after a Ask later action.
+      name: Reminder interval
+      description: Minutes between reminders until medication is taken.
       default: 30
       selector:
         number:
@@ -72,10 +67,6 @@ blueprint:
       description: "Default: Medication taken"
       default: "Medication taken"
 
-    logbook_message_later:
-      name: Logbook message for action Ask later (Optional)
-      description: "Default: Postpone reminder"
-      default: "Postpone reminder"
 
     logbook_message_skip:
       name: Logbook message for action Skip (Optional)
@@ -133,8 +124,6 @@ action:
                   actions:
                     - title: !input notification_action_taken
                       action: "taken"
-                    - title: !input notification_action_later
-                      action: "later"
                     - title: !input notification_action_skip
                       action: "skip"
                   tag: !input input_boolean
@@ -156,15 +145,6 @@ action:
                     name: !input "notification_title"
                     message: !input "logbook_message_taken"
                     entity_id: !input "input_boolean"
-            - conditions: "{{ wait.trigger and wait.trigger.event.data.action == 'later' }}"
-              sequence:
-                - service: logbook.log
-                  data:
-                    name: !input "notification_title"
-                    message: !input "logbook_message_later"
-                    entity_id: !input "input_boolean"
-                - delay:
-                    minutes: !input "ask_later_wait_time"
             - conditions: "{{ wait.trigger and wait.trigger.event.data.action == 'skip' }}"
               sequence:
                 - service: input_boolean.turn_on
@@ -190,3 +170,5 @@ action:
                 name: !input "notification_title"
                 message: !input "logbook_message_no_answer"
                 entity_id: !input "input_boolean"
+            - delay:
+                minutes: !input "ask_later_wait_time"
