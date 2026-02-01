@@ -1,6 +1,6 @@
 blueprint:
   name: Todo → Repeating Notifications
-  description: Notify selected mobile devices on todo creation and at a configurable interval until acknowledged.
+  description: Notify on todo creation and at a configurable interval until acknowledged.
   domain: automation
 
   input:
@@ -10,13 +10,12 @@ blueprint:
         entity:
           domain: todo
 
-    mobile_devices:
-      name: Mobile devices
-      description: Devices to notify
+    notify_service:
+      name: Notification service
+      description: >
+        Select a notify service (can be a notify group).
       selector:
-        device:
-          integration: mobile_app
-          multiple: true
+        action:
 
     interval:
       name: Notification interval (minutes)
@@ -43,15 +42,6 @@ variables:
   todo_entity: !input todo_list
   interval_minutes: !input interval
 
-  # Map device IDs → notify services
-  notify_services: >
-    {% set services = [] %}
-    {% for d in !input mobile_devices %}
-      {% set device = device_attr(d, 'name') | lower | replace(' ', '_') %}
-      {% set services = services + ['notify.mobile_app_' ~ device] %}
-    {% endfor %}
-    {{ services }}
-
 action:
   - variables:
       items: "{{ state_attr(todo_entity, 'items') or [] }}"
@@ -67,17 +57,14 @@ action:
             {% set elapsed = (now() - created).total_seconds() %}
             {{ elapsed >= 0 and (elapsed // 60) % interval == 0 }}
 
-        - repeat:
-            for_each: "{{ notify_services }}"
-            sequence:
-              - service: "{{ repeat.item }}"
-                data:
-                  title: "{{ repeat.parent.item.summary }}"
-                  message: "{{ repeat.parent.item.summary }}"
+        - service: !input notify_service
+          data:
+            title: "{{ repeat.item.summary }}"
+            message: "{{ repeat.item.summary }}"
+            data:
+              tag: "todo_{{ repeat.item.id }}"
+              actions:
+                - action: ACK_TODO
+                  title: Acknowledge
                   data:
-                    tag: "todo_{{ repeat.parent.item.id }}"
-                    actions:
-                      - action: ACK_TODO
-                        title: Acknowledge
-                        data:
-                          todo_id: "{{ repeat.parent.item.id }}"
+                    todo_id: "{{ repeat.item.id }}"
