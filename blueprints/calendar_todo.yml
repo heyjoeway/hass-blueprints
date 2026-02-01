@@ -1,0 +1,44 @@
+blueprint:
+  name: Calendar → Todo (Create Event Tasks)
+  description: Create a todo entry for each calendar event start.
+  domain: automation
+  input:
+    calendar_entity:
+      name: Calendar
+      selector:
+        entity:
+          domain: calendar
+    todo_list:
+      name: Todo list
+      selector:
+        entity:
+          domain: todo
+
+mode: single
+
+trigger:
+  - platform: calendar
+    entity_id: !input calendar_entity
+    event: start
+
+variables:
+  uid: "{{ trigger.calendar_event.uid }}"
+  start: "{{ trigger.calendar_event.start }}"
+  summary: "{{ trigger.calendar_event.summary }}"
+  todo_entity: !input todo_list
+
+condition:
+  # Skip if this UID already exists in the todo list
+  - condition: template
+    value_template: >
+      {% set items = state_attr(todo_entity, 'items') or [] %}
+      {{ items | selectattr('description', 'search', uid) | list | count == 0 }}
+
+action:
+  - service: todo.add_item
+    data:
+      entity_id: !input todo_list
+      item: "{{ summary }}"
+      description: >
+        uid={{ uid }}
+        start={{ start }}

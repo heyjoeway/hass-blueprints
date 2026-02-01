@@ -1,0 +1,72 @@
+blueprint:
+  name: Todo → Repeating Notifications
+  description: Notify on todo creation and at a configurable interval until acknowledged.
+  domain: automation
+
+  input:
+    todo_list:
+      name: Todo list
+      selector:
+        entity:
+          domain: todo
+
+    notify_service:
+      name: Notification service
+      selector:
+        action:
+
+    interval:
+      name: Notification interval (minutes)
+      description: Minutes between notifications until acknowledged.
+      default: 15
+      selector:
+        number:
+          min: 1
+          max: 120
+          unit_of_measurement: minutes
+          step: 1
+
+mode: single
+
+trigger:
+  # Immediate notification on creation
+  - platform: event
+    event_type: todo_item_added
+    event_data:
+      entity_id: !input todo_list
+
+  # Frequent tick for interval comparison
+  - platform: time_pattern
+    minutes: "/1"
+
+variables:
+  todo_entity: !input todo_list
+  notify: !input notify_service
+  interval_minutes: !input interval
+
+action:
+  - variables:
+      items: "{{ state_attr(todo_entity, 'items') or [] }}"
+
+  - repeat:
+      for_each: >
+        {{ items | selectattr('status', 'eq', 'needs_action') | list }}
+      sequence:
+        - condition: template
+          value_template: >
+            {% set created = as_datetime(repeat.item.created) %}
+            {% set interval = interval_minutes | int %}
+            {% set elapsed = (now() - created).total_seconds() %}
+            {{ elapsed >= 0 and (elapsed // 60) % interval == 0 }}
+
+        - service: !input notify_service
+          data:
+            title: "Reminder"
+            message: "{{ repeat.item.summary }}"
+            data:
+              tag: "todo_{{ repeat.item.id }}"
+              actions:
+                - action: ACK_TODO
+                  title: Acknowledge
+                  data:
+                    todo_id: "{{ repeat.item.id }}"
