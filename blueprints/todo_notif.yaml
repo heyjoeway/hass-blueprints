@@ -57,7 +57,7 @@ action:
             {% set elapsed = (now() - created).total_seconds() %}
             {{ elapsed >= 0 and (elapsed // 60) % interval == 0 }}
 
-        - service: !input notify_service
+        - action: !input notify_service
           data:
             title: "{{ repeat.item.summary }}"
             message: "{{ repeat.item.summary }}"
