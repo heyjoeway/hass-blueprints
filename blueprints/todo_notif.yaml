@@ -63,8 +63,3 @@ action:
             message: "{{ repeat.item.summary }}"
             data:
               tag: "todo_{{ repeat.item.id }}"
-              actions:
-                - action: ACK_TODO
-                  title: Acknowledge
-                  data:
-                    todo_id: "{{ repeat.item.id }}"
